@@ -366,7 +366,7 @@ class GCodeTerminal:
 
 
 class ControlButtons:
-    def __init__(self, on_pause, on_cancel, on_home, on_cool, on_extrude, on_retract):
+    def __init__(self, on_pause, on_cancel, on_home, on_cool, on_extrude, on_retract, on_refresh):
         self.btn_pause = ft.ElevatedButton(
             text='⏯️ Пауза', on_click=on_pause,
             bgcolor='#34d39920', color='#34d399',
@@ -380,7 +380,9 @@ class ControlButtons:
         self.btn_cool = ft.ElevatedButton(text='❄️ Охладить', on_click=on_cool, **base_style)
         self.btn_extrude = ft.ElevatedButton(text='⬆️ Экструзия', on_click=on_extrude, **base_style)
         self.btn_retract = ft.ElevatedButton(text='⬇️ Ретракция', on_click=on_retract, **base_style)
-        self.row = ft.Row([self.btn_pause, self.btn_cancel, self.btn_home, self.btn_cool, self.btn_extrude, self.btn_retract],
+        self.btn_refresh = ft.ElevatedButton(text='🔄 Обновить', on_click=on_refresh, bgcolor='#2563eb', color='white')
+        self.row = ft.Row([self.btn_pause, self.btn_cancel, self.btn_home, self.btn_cool,
+                           self.btn_extrude, self.btn_retract, self.btn_refresh],
                           spacing=8, wrap=True)
 
     def update_state(self, is_printing: bool, is_paused: bool) -> None:
@@ -470,7 +472,12 @@ def main(page: ft.Page):
         terminal.add_line("> G1 E-30 F300", 'cmd')
         terminal.add_line("OK", 'ok')
 
-    controls = ControlButtons(on_pause, on_cancel, on_home, on_cool, on_extrude, on_retract)
+    def on_refresh(e):
+        farm.update_all_simulations()
+        terminal.add_line("Обновление данных", 'info')
+        refresh_ui()
+
+    controls = ControlButtons(on_pause, on_cancel, on_home, on_cool, on_extrude, on_retract, on_refresh)
 
     def on_printer_select(pid: int):
         farm.switch_to(pid)
@@ -499,12 +506,7 @@ def main(page: ft.Page):
         )
         page.update()
 
-    def simulation_tick():
-        farm.update_all_simulations()
-        refresh_ui()
-
-    # Исправлено: set_interval → add_interval для старых версий Flet
-    page.add_interval(1, simulation_tick)
+    # Больше не используем интервалы — вместо них ручное обновление по кнопке
     refresh_ui()
 
 
