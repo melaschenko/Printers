@@ -4,6 +4,7 @@ import math
 import random
 from datetime import datetime
 from typing import List, Callable
+import os
 
 # ================================================================
 #  МОДЕЛИ ДАННЫХ
@@ -548,4 +549,5 @@ def main(page: ft.Page):
 
 
 if __name__ == '__main__':
-    ft.app(target=main)
+    port = int(os.environ.get("PORT", 8550))
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port)
