@@ -132,7 +132,7 @@ def get_status_text(status: str, paused: bool = False) -> str:
 
 
 # ================================================================
-#  UI-КОМПОНЕНТЫ (без border, padding.only, Animation)
+#  UI-КОМПОНЕНТЫ (без Canvas, без GridView, без сложных стилей)
 # ================================================================
 class PrinterListPanel:
     def __init__(self, farm: PrinterFarm, on_select: Callable[[int], None]):
@@ -141,7 +141,7 @@ class PrinterListPanel:
         self.printer_column = ft.Column(spacing=5, scroll=ft.ScrollMode.AUTO)
         self.container = ft.Container(
             content=ft.Column([
-                ft.Text('Принтеры (10)', size=11, weight=ft.FontWeight.W_600, color=ft.colors.GREY_500),
+                ft.Text('Принтеры (10)', size=11, weight=ft.FontWeight.W_600, color='#6b7280'),
                 self.printer_column,
             ], spacing=8),
             width=260, padding=8, bgcolor='#131720',
@@ -160,17 +160,16 @@ class PrinterListPanel:
         active = p.id == self.farm.active_id
         indicator = get_status_indicator_color(p.status, p.paused)
         status_txt = get_status_text(p.status, p.paused)
-        # Рамка имитируется жирным фоном и отступом
         return ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Container(width=8, height=8, border_radius=4, bgcolor=indicator),
                     ft.Text(p.name, weight=ft.FontWeight.W_600, size=13, overflow=ft.TextOverflow.ELLIPSIS),
-                    ft.Text(status_txt, size=10, color=ft.colors.GREY_400),
+                    ft.Text(status_txt, size=10, color='#9ca3af'),
                 ], spacing=8, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 ft.Row([
-                    ft.Text(p.material, size=10, color=ft.colors.GREY_500),
-                    ft.Text(f"{p.progress}%", size=10, color=ft.colors.GREY_500) if p.status == 'printing' else ft.Text(''),
+                    ft.Text(p.material, size=10, color='#6b7280'),
+                    ft.Text(f"{p.progress}%", size=10, color='#6b7280') if p.status == 'printing' else ft.Text(''),
                 ], spacing=5),
                 ft.ProgressBar(
                     value=p.progress / 100 if p.status == 'printing' else 0,
@@ -199,8 +198,8 @@ class StatusCard:
         self.remaining_val = ft.Text(size=16, weight=ft.FontWeight.W_700, font_family='monospace')
         self.nozzle_val = ft.Text(size=16, weight=ft.FontWeight.W_700, color='#f97316', font_family='monospace')
         self.bed_val = ft.Text(size=16, weight=ft.FontWeight.W_700, color='#f97316', font_family='monospace')
-        self.file_val = ft.Text(size=11, color=ft.colors.GREY_500)
-        self.layer_val = ft.Text(size=11, color=ft.colors.GREY_500)
+        self.file_val = ft.Text(size=11, color='#6b7280')
+        self.layer_val = ft.Text(size=11, color='#6b7280')
 
         self.container = ft.Container(
             content=ft.Column([
@@ -208,21 +207,23 @@ class StatusCard:
                     ft.Row([self.status_dot, self.name_display], spacing=8),
                     self.status_badge,
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.GridView([
+                ft.Row([
                     self._tile('ПРОГРЕСС', self.progress_val),
                     self._tile('ОСТАЛОСЬ', self.remaining_val),
+                ], spacing=8),
+                ft.Row([
                     self._tile('СОПЛО', self.nozzle_val),
                     self._tile('СТОЛ', self.bed_val),
-                ], runs_count=2, max_extent=100, spacing=8, run_spacing=8),
-                ft.Row([ft.Text('Файл: ', size=11, color=ft.colors.GREY_500), self.file_val,
-                        ft.Text(' | Слой: ', size=11, color=ft.colors.GREY_500), self.layer_val], spacing=4),
+                ], spacing=8),
+                ft.Row([ft.Text('Файл: ', size=11, color='#6b7280'), self.file_val,
+                        ft.Text(' | Слой: ', size=11, color='#6b7280'), self.layer_val], spacing=4),
             ], spacing=10),
             padding=16, border_radius=12, bgcolor='#1a1f2b',
         )
 
     def _tile(self, label: str, value: ft.Text) -> ft.Container:
         return ft.Container(
-            ft.Column([ft.Text(label, size=9, color=ft.colors.GREY_500), value]),
+            ft.Column([ft.Text(label, size=9, color='#6b7280'), value]),
             padding=8, bgcolor='#0f131c', border_radius=6,
         )
 
@@ -240,7 +241,7 @@ class StatusCard:
             self.badge_text.color = '#4ec9b0' if not p.paused else '#f59e0b'
         else:
             self.status_badge.bgcolor = '#636b7820'
-            self.badge_text.color = ft.colors.GREY_400
+            self.badge_text.color = '#9ca3af'
 
         self.name_display.value = p.name
         self.progress_val.value = f"{p.progress}%" if p.status == 'printing' else '—'
@@ -251,97 +252,68 @@ class StatusCard:
         self.layer_val.value = f"{p.current_layer} / {p.total_layers}" if p.status == 'printing' else '—'
 
 
-class CameraView:
+class SimpleCameraView:
+    """Замена камере — просто текстовая информация."""
     def __init__(self):
-        self.canvas = ft.Canvas(width=400, height=180)
+        self.camera_text = ft.Text('Вид с камеры', size=16, color='#666666')
+        self.layer_info = ft.Text('', size=12, color='#9ca3af')
         self.container = ft.Container(
-            content=self.canvas,
+            content=ft.Column([
+                self.camera_text,
+                self.layer_info,
+            ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             border_radius=8, bgcolor='#000000',
-            padding=0,
+            padding=20, height=180,
         )
 
     def build(self) -> ft.Container:
         return self.container
 
-    def draw(self, printer: PrinterModel) -> None:
-        self.canvas.shapes.clear()
-        w = self.container.width or 400
-        h = self.container.height or 180
-        if w <= 0 or h <= 0:
-            return
-        bed_w, bed_h = w * 0.7, h * 0.45
-        bed_x, bed_y = (w - bed_w) / 2, h * 0.4
-        self.canvas.shapes.append(ft.Rect(bed_x, bed_y, bed_w, bed_h, paint=ft.Paint(color='#1a1a1a')))
-        self.canvas.shapes.append(ft.Rect(bed_x, bed_y, bed_w, bed_h, paint=ft.Paint(color='#333333', style=ft.PaintingStyle.STROKE, stroke_width=1)))
-
-        if printer.status == 'printing' and not printer.paused:
-            obj_w, obj_h = bed_w * 0.35, bed_h * 0.6
-            obj_x = bed_x + bed_w/2 - obj_w/2
-            obj_bottom = bed_y + bed_h - 4
-            obj_top = obj_bottom - obj_h * printer.layer_progress
-            self.canvas.shapes.append(ft.Rect(obj_x, max(obj_top, bed_y), obj_w, min(obj_bottom - obj_top, obj_h),
-                                              paint=ft.Paint(color='#e8d5b7')))
-            nozzle_x = obj_x + obj_w/2 + math.sin(time.time() * 2 + printer.id) * obj_w * 0.3
-            nozzle_y = obj_top - 8
-            self.canvas.shapes.append(ft.Circle(nozzle_x, nozzle_y, 5, paint=ft.Paint(color='#ff4444')))
+    def update(self, printer: PrinterModel) -> None:
+        if printer.status == 'printing':
+            self.camera_text.value = 'Печать активна'
+            self.layer_info.value = f'Слой: {printer.current_layer}/{printer.total_layers}'
         elif printer.status == 'idle':
-            self.canvas.shapes.append(ft.Text(w/2, h/2, 'Принтер готов', style=ft.TextStyle(color='#666666', size=12)))
-        self.canvas.shapes.append(ft.Rect(4, 4, w-8, h-8, paint=ft.Paint(color='#ffffff20', style=ft.PaintingStyle.STROKE, stroke_width=1)))
+            self.camera_text.value = 'Принтер готов'
+            self.layer_info.value = ''
+        else:
+            self.camera_text.value = 'Нет данных'
+            self.layer_info.value = ''
 
 
-class TemperatureChart:
+class SimpleTempChart:
+    """Замена графику температур — текстовые индикаторы."""
     def __init__(self):
-        self.canvas = ft.Canvas(width=400, height=160)
+        self.nozzle_label = ft.Text('Сопло: --°C', size=12, color='#f97316', weight=ft.FontWeight.BOLD)
+        self.bed_label = ft.Text('Стол: --°C', size=12, color='#f59e0b', weight=ft.FontWeight.BOLD)
+        self.nozzle_progress = ft.ProgressBar(value=0, color='#f97316', bgcolor='#252b36', height=4, border_radius=2)
+        self.bed_progress = ft.ProgressBar(value=0, color='#f59e0b', bgcolor='#252b36', height=4, border_radius=2)
         self.container = ft.Container(
-            content=self.canvas,
+            content=ft.Column([
+                self.nozzle_label,
+                self.nozzle_progress,
+                self.bed_label,
+                self.bed_progress,
+            ], spacing=10),
             border_radius=8, bgcolor='#0a0d12',
-            padding=0,
+            padding=16, height=160,
         )
 
     def build(self) -> ft.Container:
         return self.container
 
-    def draw(self, printer: PrinterModel) -> None:
-        self.canvas.shapes.clear()
-        w = self.container.width or 400
-        h = self.container.height or 160
-        if w <= 0 or h <= 0:
-            return
-        m = {'top': 8, 'right': 20, 'bottom': 16, 'left': 34}
-        pw, ph = w - m['left'] - m['right'], h - m['top'] - m['bottom']
-        if pw <= 0 or ph <= 0:
-            return
-        self.canvas.shapes.append(ft.Rect(0, 0, w, h, paint=ft.Paint(color='#0a0d12')))
-
-        all_temps = printer.history_nozzle + printer.history_bed + [printer.target_nozzle, printer.target_bed]
-        min_t = max(0, min(all_temps) - 5)
-        max_t = max(all_temps) + 10
-        if max_t - min_t < 30:
-            min_t = int(min_t // 5) * 5
-            max_t = min_t + 40
-
-        def tx(i): return m['left'] + (i / 89) * pw
-        def ty(val): return m['top'] + ph - ((val - min_t) / (max_t - min_t)) * ph
-
-        for i in range(5):
-            y = m['top'] + (ph / 4) * i
-            self.canvas.shapes.append(ft.Line(m['left'], y, w - m['right'], y, paint=ft.Paint(color='#1a1f2b', stroke_width=0.5)))
+    def update(self, printer: PrinterModel) -> None:
+        self.nozzle_label.value = f"Сопло: {int(printer.nozzle_temp)}°C"
+        self.bed_label.value = f"Стол: {int(printer.bed_temp)}°C"
+        # Прогресс-бары показывают отношение текущей температуры к целевой (если цель > 0)
         if printer.target_nozzle > 0:
-            yt = ty(printer.target_nozzle)
-            self.canvas.shapes.append(ft.Line(m['left'], yt, w - m['right'], yt, paint=ft.Paint(color='#4ec9b060', stroke_width=1, stroke_dash_pattern=[5, 3])))
-
-        bed_pts = [ft.Offset(tx(i), ty(v)) for i, v in enumerate(printer.history_bed)]
-        for i in range(1, len(bed_pts)):
-            self.canvas.shapes.append(ft.Line(bed_pts[i-1].x, bed_pts[i-1].y, bed_pts[i].x, bed_pts[i].y,
-                                              paint=ft.Paint(color='#f59e0b', stroke_width=2)))
-        nozzle_pts = [ft.Offset(tx(i), ty(v)) for i, v in enumerate(printer.history_nozzle)]
-        for i in range(1, len(nozzle_pts)):
-            self.canvas.shapes.append(ft.Line(nozzle_pts[i-1].x, nozzle_pts[i-1].y, nozzle_pts[i].x, nozzle_pts[i].y,
-                                              paint=ft.Paint(color='#f97316', stroke_width=2.5, stroke_cap=ft.StrokeCap.ROUND)))
-        self.canvas.shapes.append(ft.Text(m['left']+4, m['top']+2, f"Сопло: {int(printer.history_nozzle[-1])}°C",
-                                          style=ft.TextStyle(color='#f97316', size=9, weight=ft.FontWeight.BOLD)))
-        self.canvas.shapes.append(ft.Text(m['left']+4, m['top']+14, f"Стол: {int(printer.history_bed[-1])}°C",
-                                          style=ft.TextStyle(color='#f59e0b', size=9, weight=ft.FontWeight.BOLD)))
+            self.nozzle_progress.value = min(1.0, printer.nozzle_temp / printer.target_nozzle)
+        else:
+            self.nozzle_progress.value = 0
+        if printer.target_bed > 0:
+            self.bed_progress.value = min(1.0, printer.bed_temp / printer.target_bed)
+        else:
+            self.bed_progress.value = 0
 
 
 class GCodeTerminal:
@@ -361,11 +333,11 @@ class GCodeTerminal:
         )
         self.send_btn = ft.ElevatedButton(
             'Отправить', on_click=lambda e: self._send(),
-            style=ft.ButtonStyle(bgcolor='#7c6ff7', color='white'),
+            bgcolor='#7c6ff7', color='white',
         )
         self.container = ft.Container(
             content=ft.Column([
-                ft.Row([ft.Text('💻 G-Code терминал', size=11, color=ft.colors.GREY_400),
+                ft.Row([ft.Text('💻 G-Code терминал', size=11, color='#9ca3af'),
                         ft.Text('● подключено', size=11, color='#34d399')], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 self.output,
                 ft.Row([self.input, self.send_btn], spacing=0),
@@ -398,17 +370,17 @@ class ControlButtons:
     def __init__(self, on_pause, on_cancel, on_home, on_cool, on_extrude, on_retract):
         self.btn_pause = ft.ElevatedButton(
             text='⏯️ Пауза', on_click=on_pause,
-            style=ft.ButtonStyle(bgcolor='#34d39920', color='#34d399'),
+            bgcolor='#34d39920', color='#34d399',
         )
         self.btn_cancel = ft.ElevatedButton(
             text='⏹️ Отмена', on_click=on_cancel,
-            style=ft.ButtonStyle(bgcolor='#ef444420', color='#ef4444'),
+            bgcolor='#ef444420', color='#ef4444',
         )
-        base_style = ft.ButtonStyle(bgcolor='#1a1f2b', color=ft.colors.WHITE)
-        self.btn_home = ft.ElevatedButton(text='🏠 Home', on_click=on_home, style=base_style)
-        self.btn_cool = ft.ElevatedButton(text='❄️ Охладить', on_click=on_cool, style=base_style)
-        self.btn_extrude = ft.ElevatedButton(text='⬆️ Экструзия', on_click=on_extrude, style=base_style)
-        self.btn_retract = ft.ElevatedButton(text='⬇️ Ретракция', on_click=on_retract, style=base_style)
+        base_style = {'bgcolor': '#1a1f2b', 'color': 'white'}
+        self.btn_home = ft.ElevatedButton(text='🏠 Home', on_click=on_home, **base_style)
+        self.btn_cool = ft.ElevatedButton(text='❄️ Охладить', on_click=on_cool, **base_style)
+        self.btn_extrude = ft.ElevatedButton(text='⬆️ Экструзия', on_click=on_extrude, **base_style)
+        self.btn_retract = ft.ElevatedButton(text='⬇️ Ретракция', on_click=on_retract, **base_style)
         self.row = ft.Row([self.btn_pause, self.btn_cancel, self.btn_home, self.btn_cool, self.btn_extrude, self.btn_retract],
                           spacing=8, wrap=True)
 
@@ -448,8 +420,8 @@ def main(page: ft.Page):
 
     farm = PrinterFarm(PRINTERS_DATA)
     status_card = StatusCard(farm)
-    camera_view = CameraView()
-    temp_chart = TemperatureChart()
+    camera_view = SimpleCameraView()
+    temp_chart = SimpleTempChart()
 
     def handle_gcode(cmd: str):
         terminal.add_line(f"> {cmd}", 'cmd')
@@ -520,8 +492,8 @@ def main(page: ft.Page):
     def refresh_ui():
         printer_list.refresh()
         status_card.update()
-        camera_view.draw(farm.active_printer)
-        temp_chart.draw(farm.active_printer)
+        camera_view.update(farm.active_printer)
+        temp_chart.update(farm.active_printer)
         controls.update_state(
             is_printing=(farm.active_printer.status == 'printing'),
             is_paused=farm.active_printer.paused
