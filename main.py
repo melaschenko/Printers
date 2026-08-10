@@ -136,7 +136,6 @@ def get_status_text(status: str, paused: bool = False) -> str:
     return 'Офлайн'
 
 
-# Вспомогательная функция для создания одинаковой границы со всех сторон
 def all_border(width: float, color: str) -> ft.border.Border:
     side = ft.border.BorderSide(width, color)
     return ft.border.Border(top=side, left=side, bottom=side, right=side)
@@ -173,7 +172,6 @@ class PrinterListPanel:
         active = p.id == self.farm.active_id
         indicator = get_status_indicator_color(p.status, p.paused)
         status_txt = get_status_text(p.status, p.paused)
-        # Граница для активного/неактивного принтера
         if active:
             border = all_border(2, '#7c6ff7')
         else:
@@ -207,11 +205,15 @@ class StatusCard:
     def __init__(self, farm: PrinterFarm):
         self.farm = farm
         self.status_dot = ft.Container(width=10, height=10, border_radius=5, bgcolor='#4ec9b0')
-        # Бейдж будет переопределяться при update, но создадим начальный
-        self.status_badge = ft.Text('Печать', size=11, weight=ft.FontWeight.W_600,
-                                    bgcolor='#4ec9b020', color='#4ec9b0',
-                                    border=all_border(1, '#4ec9b040'),
-                                    border_radius=12)
+        # Бейдж теперь — контейнер с текстом внутри
+        self.badge_text = ft.Text('Печать', size=11, weight=ft.FontWeight.W_600)
+        self.status_badge = ft.Container(
+            content=self.badge_text,
+            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+            border_radius=12,
+            bgcolor='#4ec9b020',
+            border=all_border(1, '#4ec9b040'),
+        )
         self.name_display = ft.Text(size=14, weight=ft.FontWeight.W_600)
         self.progress_val = ft.Text(size=18, weight=ft.FontWeight.W_700, font_family='monospace', color='#4ec9b0')
         self.remaining_val = ft.Text(size=16, weight=ft.FontWeight.W_700, font_family='monospace')
@@ -253,14 +255,14 @@ class StatusCard:
         p = self.farm.active_printer
         self.status_dot.bgcolor = get_status_indicator_color(p.status, p.paused)
         badge_text = get_status_text(p.status, p.paused)
-        self.status_badge.text = badge_text
+        self.badge_text.value = badge_text
         if p.status == 'printing':
             self.status_badge.bgcolor = '#4ec9b020' if not p.paused else '#f59e0b20'
-            self.status_badge.color = '#4ec9b0' if not p.paused else '#f59e0b'
+            self.badge_text.color = '#4ec9b0' if not p.paused else '#f59e0b'
             self.status_badge.border = all_border(1, '#4ec9b040' if not p.paused else '#f59e0b40')
         else:
             self.status_badge.bgcolor = '#636b7820'
-            self.status_badge.color = ft.colors.GREY_400
+            self.badge_text.color = ft.colors.GREY_400
             self.status_badge.border = all_border(1, '#636b7840')
 
         self.name_display.value = p.name
@@ -485,7 +487,6 @@ def main(page: ft.Page):
 
     terminal = GCodeTerminal(on_send=handle_gcode)
 
-    # Обработчики кнопок
     def on_pause(e):
         farm.toggle_pause_active()
         terminal.add_line("Пауза/возобновление", 'warn')
