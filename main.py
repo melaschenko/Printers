@@ -528,7 +528,7 @@ def main(page: ft.Page):
         )
         page.update()
 
-    def simulation_tick(): I'm
+    def simulation_tick():
         farm.update_all_simulations()
         refresh_ui()
 
