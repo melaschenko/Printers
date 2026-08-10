@@ -305,7 +305,6 @@ class SimpleTempChart:
     def update(self, printer: PrinterModel) -> None:
         self.nozzle_label.value = f"Сопло: {int(printer.nozzle_temp)}°C"
         self.bed_label.value = f"Стол: {int(printer.bed_temp)}°C"
-        # Прогресс-бары показывают отношение текущей температуры к целевой (если цель > 0)
         if printer.target_nozzle > 0:
             self.nozzle_progress.value = min(1.0, printer.nozzle_temp / printer.target_nozzle)
         else:
@@ -504,7 +503,8 @@ def main(page: ft.Page):
         farm.update_all_simulations()
         refresh_ui()
 
-    page.set_interval(1, simulation_tick)
+    # Исправлено: set_interval → add_interval для старых версий Flet
+    page.add_interval(1, simulation_tick)
     refresh_ui()
 
 
