@@ -136,6 +136,12 @@ def get_status_text(status: str, paused: bool = False) -> str:
     return 'Офлайн'
 
 
+# Вспомогательная функция для создания одинаковой границы со всех сторон
+def all_border(width: float, color: str) -> ft.border.Border:
+    side = ft.border.BorderSide(width, color)
+    return ft.border.Border(top=side, left=side, bottom=side, right=side)
+
+
 # ================================================================
 #  UI-КОМПОНЕНТЫ
 # ================================================================
@@ -167,6 +173,11 @@ class PrinterListPanel:
         active = p.id == self.farm.active_id
         indicator = get_status_indicator_color(p.status, p.paused)
         status_txt = get_status_text(p.status, p.paused)
+        # Граница для активного/неактивного принтера
+        if active:
+            border = all_border(2, '#7c6ff7')
+        else:
+            border = all_border(2, '#252b36')
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -185,7 +196,7 @@ class PrinterListPanel:
             ], spacing=2),
             padding=10, border_radius=8,
             bgcolor='#1a1f2b' if not active else '#7c6ff720',
-            border=ft.border.all(2, '#7c6ff7' if active else '#252b36'),
+            border=border,
             on_click=lambda e, pid=p.id: self.on_select(pid),
             animate=ft.animation.Animation(200, ft.AnimationCurve.EASE),
         )
@@ -196,9 +207,11 @@ class StatusCard:
     def __init__(self, farm: PrinterFarm):
         self.farm = farm
         self.status_dot = ft.Container(width=10, height=10, border_radius=5, bgcolor='#4ec9b0')
+        # Бейдж будет переопределяться при update, но создадим начальный
         self.status_badge = ft.Text('Печать', size=11, weight=ft.FontWeight.W_600,
                                     bgcolor='#4ec9b020', color='#4ec9b0',
-                                    border=ft.border.all(1, '#4ec9b040'), border_radius=12)
+                                    border=all_border(1, '#4ec9b040'),
+                                    border_radius=12)
         self.name_display = ft.Text(size=14, weight=ft.FontWeight.W_600)
         self.progress_val = ft.Text(size=18, weight=ft.FontWeight.W_700, font_family='monospace', color='#4ec9b0')
         self.remaining_val = ft.Text(size=16, weight=ft.FontWeight.W_700, font_family='monospace')
@@ -222,7 +235,8 @@ class StatusCard:
                 ft.Row([ft.Text('Файл: ', size=11, color=ft.colors.GREY_500), self.file_val,
                         ft.Text(' | Слой: ', size=11, color=ft.colors.GREY_500), self.layer_val], spacing=4),
             ], spacing=10),
-            padding=16, border_radius=12, bgcolor='#1a1f2b', border=ft.border.all(1, '#252b36'),
+            padding=16, border_radius=12, bgcolor='#1a1f2b',
+            border=all_border(1, '#252b36'),
         )
 
     def _tile(self, label: str, value: ft.Text) -> ft.Container:
@@ -243,11 +257,11 @@ class StatusCard:
         if p.status == 'printing':
             self.status_badge.bgcolor = '#4ec9b020' if not p.paused else '#f59e0b20'
             self.status_badge.color = '#4ec9b0' if not p.paused else '#f59e0b'
-            self.status_badge.border = ft.border.all(1, '#4ec9b040' if not p.paused else '#f59e0b40')
+            self.status_badge.border = all_border(1, '#4ec9b040' if not p.paused else '#f59e0b40')
         else:
             self.status_badge.bgcolor = '#636b7820'
             self.status_badge.color = ft.colors.GREY_400
-            self.status_badge.border = ft.border.all(1, '#636b7840')
+            self.status_badge.border = all_border(1, '#636b7840')
 
         self.name_display.value = p.name
         self.progress_val.value = f"{p.progress}%" if p.status == 'printing' else '—'
@@ -264,7 +278,8 @@ class CameraView:
         self.canvas = ft.Canvas(width=400, height=180)
         self.container = ft.Container(
             content=self.canvas,
-            border_radius=8, bgcolor='#000000', border=ft.border.all(1, '#252b36'),
+            border_radius=8, bgcolor='#000000',
+            border=all_border(1, '#252b36'),
             padding=0, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
 
@@ -303,7 +318,8 @@ class TemperatureChart:
         self.canvas = ft.Canvas(width=400, height=160)
         self.container = ft.Container(
             content=self.canvas,
-            border_radius=8, bgcolor='#0a0d12', border=ft.border.all(1, '#1a1f2b'),
+            border_radius=8, bgcolor='#0a0d12',
+            border=all_border(1, '#1a1f2b'),
             padding=0,
         )
 
@@ -380,7 +396,8 @@ class GCodeTerminal:
                 self.output,
                 ft.Row([self.input, self.send_btn], spacing=0),
             ], spacing=4),
-            border_radius=10, bgcolor='#0a0d12', border=ft.border.all(1, '#252b36'),
+            border_radius=10, bgcolor='#0a0d12',
+            border=all_border(1, '#252b36'),
             padding=0, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )
 
