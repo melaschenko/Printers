@@ -31,12 +31,10 @@ class PrinterModel:
         self.paused = False
         self.color = color
         self.layer_progress = progress / 100.0 if total_layers > 0 else 0.0
-        # история температур (последние 90 точек)
         self.history_nozzle = [nozzle_temp + (random.random() - 0.5) * 3 for _ in range(90)]
         self.history_bed = [bed_temp + (random.random() - 0.5) * 1.5 for _ in range(90)]
 
     def update_simulation(self) -> None:
-        """Обновление параметров (вызывается раз в секунду)."""
         if self.status == 'printing' and not self.paused:
             self.progress += 0.04
             if self.progress >= 100:
@@ -52,14 +50,12 @@ class PrinterModel:
                 self.remaining = max(0, self.remaining - 1)
                 self.current_layer = int(self.progress / 100 * self.total_layers)
                 self.layer_progress = self.progress / 100.0
-            # имитация колебаний температуры
             self.nozzle_temp = self.target_nozzle + (random.random() - 0.5) * 1.5
             self.bed_temp = self.target_bed + (random.random() - 0.5) * 0.6
         elif self.status == 'idle' and self.target_nozzle == 0:
             self.nozzle_temp += (24 - self.nozzle_temp) * 0.03
             self.bed_temp += (22 - self.bed_temp) * 0.03
 
-        # сдвиг истории
         self.history_nozzle.append(self.nozzle_temp)
         self.history_bed.append(self.bed_temp)
         if len(self.history_nozzle) > 90:
@@ -69,7 +65,6 @@ class PrinterModel:
 
 
 class PrinterFarm:
-    """Управление списком принтеров и активным."""
     def __init__(self, printers: List[PrinterModel]):
         self.printers = printers
         self.active_id = 0
@@ -136,16 +131,10 @@ def get_status_text(status: str, paused: bool = False) -> str:
     return 'Офлайн'
 
 
-def all_border(width: float, color: str) -> ft.border.Border:
-    side = ft.border.BorderSide(width, color)
-    return ft.border.Border(top=side, left=side, bottom=side, right=side)
-
-
 # ================================================================
-#  UI-КОМПОНЕНТЫ
+#  UI-КОМПОНЕНТЫ (без border, padding.only, Animation)
 # ================================================================
 class PrinterListPanel:
-    """Боковая панель со списком принтеров."""
     def __init__(self, farm: PrinterFarm, on_select: Callable[[int], None]):
         self.farm = farm
         self.on_select = on_select
@@ -156,7 +145,6 @@ class PrinterListPanel:
                 self.printer_column,
             ], spacing=8),
             width=260, padding=8, bgcolor='#131720',
-            border=ft.border.only(right=ft.border.BorderSide(1, '#252b36')),
         )
 
     def build(self) -> ft.Container:
@@ -172,10 +160,7 @@ class PrinterListPanel:
         active = p.id == self.farm.active_id
         indicator = get_status_indicator_color(p.status, p.paused)
         status_txt = get_status_text(p.status, p.paused)
-        if active:
-            border = all_border(2, '#7c6ff7')
-        else:
-            border = all_border(2, '#252b36')
+        # Рамка имитируется жирным фоном и отступом
         return ft.Container(
             content=ft.Column([
                 ft.Row([
@@ -193,26 +178,21 @@ class PrinterListPanel:
                 ) if p.status == 'printing' else ft.Container(height=3),
             ], spacing=2),
             padding=10, border_radius=8,
-            bgcolor='#1a1f2b' if not active else '#7c6ff720',
-            border=border,
+            bgcolor='#7c6ff720' if active else '#1a1f2b',
             on_click=lambda e, pid=p.id: self.on_select(pid),
-            animate=ft.Animation(200, curve='ease'),
         )
 
 
 class StatusCard:
-    """Карточка с информацией о выбранном принтере."""
     def __init__(self, farm: PrinterFarm):
         self.farm = farm
         self.status_dot = ft.Container(width=10, height=10, border_radius=5, bgcolor='#4ec9b0')
-        # Бейдж теперь — контейнер с текстом внутри
         self.badge_text = ft.Text('Печать', size=11, weight=ft.FontWeight.W_600)
         self.status_badge = ft.Container(
             content=self.badge_text,
-            padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
+            padding=5,
             border_radius=12,
             bgcolor='#4ec9b020',
-            border=all_border(1, '#4ec9b040'),
         )
         self.name_display = ft.Text(size=14, weight=ft.FontWeight.W_600)
         self.progress_val = ft.Text(size=18, weight=ft.FontWeight.W_700, font_family='monospace', color='#4ec9b0')
@@ -238,7 +218,6 @@ class StatusCard:
                         ft.Text(' | Слой: ', size=11, color=ft.colors.GREY_500), self.layer_val], spacing=4),
             ], spacing=10),
             padding=16, border_radius=12, bgcolor='#1a1f2b',
-            border=all_border(1, '#252b36'),
         )
 
     def _tile(self, label: str, value: ft.Text) -> ft.Container:
@@ -259,11 +238,9 @@ class StatusCard:
         if p.status == 'printing':
             self.status_badge.bgcolor = '#4ec9b020' if not p.paused else '#f59e0b20'
             self.badge_text.color = '#4ec9b0' if not p.paused else '#f59e0b'
-            self.status_badge.border = all_border(1, '#4ec9b040' if not p.paused else '#f59e0b40')
         else:
             self.status_badge.bgcolor = '#636b7820'
             self.badge_text.color = ft.colors.GREY_400
-            self.status_badge.border = all_border(1, '#636b7840')
 
         self.name_display.value = p.name
         self.progress_val.value = f"{p.progress}%" if p.status == 'printing' else '—'
@@ -275,14 +252,12 @@ class StatusCard:
 
 
 class CameraView:
-    """Симуляция вида с камеры."""
     def __init__(self):
         self.canvas = ft.Canvas(width=400, height=180)
         self.container = ft.Container(
             content=self.canvas,
             border_radius=8, bgcolor='#000000',
-            border=all_border(1, '#252b36'),
-            padding=0, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            padding=0,
         )
 
     def build(self) -> ft.Container:
@@ -315,13 +290,11 @@ class CameraView:
 
 
 class TemperatureChart:
-    """График температур сопла и стола."""
     def __init__(self):
         self.canvas = ft.Canvas(width=400, height=160)
         self.container = ft.Container(
             content=self.canvas,
             border_radius=8, bgcolor='#0a0d12',
-            border=all_border(1, '#1a1f2b'),
             padding=0,
         )
 
@@ -372,7 +345,6 @@ class TemperatureChart:
 
 
 class GCodeTerminal:
-    """Терминал отправки G-кода."""
     def __init__(self, on_send: Callable[[str], None]):
         self.on_send = on_send
         self.output = ft.TextField(
@@ -389,7 +361,7 @@ class GCodeTerminal:
         )
         self.send_btn = ft.ElevatedButton(
             'Отправить', on_click=lambda e: self._send(),
-            style=ft.ButtonStyle(bgcolor='#7c6ff7', color='white', shape=ft.RoundedRectangleBorder(radius=0)),
+            style=ft.ButtonStyle(bgcolor='#7c6ff7', color='white'),
         )
         self.container = ft.Container(
             content=ft.Column([
@@ -399,8 +371,7 @@ class GCodeTerminal:
                 ft.Row([self.input, self.send_btn], spacing=0),
             ], spacing=4),
             border_radius=10, bgcolor='#0a0d12',
-            border=all_border(1, '#252b36'),
-            padding=0, clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            padding=0,
         )
 
     def _send(self) -> None:
@@ -424,17 +395,16 @@ class GCodeTerminal:
 
 
 class ControlButtons:
-    """Панель кнопок управления."""
     def __init__(self, on_pause, on_cancel, on_home, on_cool, on_extrude, on_retract):
         self.btn_pause = ft.ElevatedButton(
             text='⏯️ Пауза', on_click=on_pause,
-            style=ft.ButtonStyle(bgcolor='#34d39920', color='#34d399', shape=ft.RoundedRectangleBorder(radius=8)),
+            style=ft.ButtonStyle(bgcolor='#34d39920', color='#34d399'),
         )
         self.btn_cancel = ft.ElevatedButton(
             text='⏹️ Отмена', on_click=on_cancel,
-            style=ft.ButtonStyle(bgcolor='#ef444420', color='#ef4444', shape=ft.RoundedRectangleBorder(radius=8)),
+            style=ft.ButtonStyle(bgcolor='#ef444420', color='#ef4444'),
         )
-        base_style = ft.ButtonStyle(bgcolor='#1a1f2b', color=ft.colors.WHITE, shape=ft.RoundedRectangleBorder(radius=8))
+        base_style = ft.ButtonStyle(bgcolor='#1a1f2b', color=ft.colors.WHITE)
         self.btn_home = ft.ElevatedButton(text='🏠 Home', on_click=on_home, style=base_style)
         self.btn_cool = ft.ElevatedButton(text='❄️ Охладить', on_click=on_cool, style=base_style)
         self.btn_extrude = ft.ElevatedButton(text='⬆️ Экструзия', on_click=on_extrude, style=base_style)
@@ -452,7 +422,7 @@ class ControlButtons:
 
 
 # ================================================================
-#  ГЛАВНОЕ ПРИЛОЖЕНИЕ
+#  ДАННЫЕ И ГЛАВНОЕ ПРИЛОЖЕНИЕ
 # ================================================================
 PRINTERS_DATA = [
     PrinterModel(0, 'Prusa XL', 'printing', 'PLA', 'gearbox.gcode', 67, 280, 187, 215, 215, 60, 60, 4980, '#7c6ff7'),
@@ -469,7 +439,7 @@ PRINTERS_DATA = [
 
 
 def main(page: ft.Page):
-    page.title = "PrintNexus Pro — Управление 3D-принтерами"
+    page.title = "PrintNexus Pro"
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 0
     page.window_width = 1280
@@ -558,7 +528,7 @@ def main(page: ft.Page):
         )
         page.update()
 
-    def simulation_tick():
+    def simulation_tick(): I'm
         farm.update_all_simulations()
         refresh_ui()
 
