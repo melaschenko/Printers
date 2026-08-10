@@ -196,7 +196,7 @@ class PrinterListPanel:
             bgcolor='#1a1f2b' if not active else '#7c6ff720',
             border=border,
             on_click=lambda e, pid=p.id: self.on_select(pid),
-            animate=ft.animation.Animation(200, ft.AnimationCurve.EASE),
+            animate=ft.Animation(200, curve='ease'),
         )
 
 
@@ -209,7 +209,7 @@ class StatusCard:
         self.badge_text = ft.Text('Печать', size=11, weight=ft.FontWeight.W_600)
         self.status_badge = ft.Container(
             content=self.badge_text,
-            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+            padding=ft.padding.only(left=8, top=3, right=8, bottom=3),
             border_radius=12,
             bgcolor='#4ec9b020',
             border=all_border(1, '#4ec9b040'),
